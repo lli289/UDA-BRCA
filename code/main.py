@@ -68,60 +68,6 @@ classifier = nn.DataParallel(totalNet.classifier, device_ids=gpu_ids, output_dev
 discriminator = nn.DataParallel(totalNet.discriminator, device_ids=gpu_ids, output_device=output_device).train(True)
 discriminator_separate = nn.DataParallel(totalNet.discriminator_separate, device_ids=gpu_ids, output_device=output_device).train(True)
 
-if args.test.test_only:
-    assert os.path.exists(args.test.resume_file)
-    data = torch.load(open(args.test.resume_file, 'rb'))
-    feature_extractor.load_state_dict(data['feature_extractor'])
-    classifier.load_state_dict(data['classifier'])
-    discriminator.load_state_dict(data['discriminator'])
-    discriminator_separate.load_state_dict(data['discriminator_separate'])
-
-    counters = [AccuracyCounter() for x in range(len(source_classes) + 1)]
-    with TrainingModeManager([feature_extractor, classifier, discriminator_separate], train=False) as mgr, \
-            Accumulator(['feature', 'predict_prob', 'label', 'domain_prob', 'before_softmax',
-                         'target_share_weight']) as target_accumulator, \
-            torch.no_grad():
-        for i, (im, label) in enumerate(tqdm(target_test_dl, desc='testing ')):
-            im = im.to(output_device)
-            label = label.to(output_device)
-
-            feature = feature_extractor.forward(im)
-            feature, __, before_softmax, predict_prob = classifier.forward(feature)
-            domain_prob = discriminator_separate.forward(__)
-
-            target_share_weight = get_target_share_weight(domain_prob, before_softmax, domain_temperature=1.0,
-                                                          class_temperature=1.0)
-
-            for name in target_accumulator.names:
-                globals()[name] = variable_to_numpy(globals()[name])
-
-            target_accumulator.updateData(globals())
-
-    for x in target_accumulator:
-        globals()[x] = target_accumulator[x]
-
-
-    def outlier(each_target_share_weight):
-        return each_target_share_weight < args.test.w_0
-
-
-    counters = [AccuracyCounter() for x in range(len(source_classes) + 1)]
-
-    for (each_predict_prob, each_label, each_target_share_weight) in zip(predict_prob, label, target_share_weight):
-        if each_label in source_classes:
-            counters[each_label].Ntotal += 1.0
-            each_pred_id = np.argmax(each_predict_prob)
-            if not outlier(each_target_share_weight[0]) and each_pred_id == each_label:
-                counters[each_label].Ncorrect += 1.0
-        else:
-            counters[-1].Ntotal += 1.0
-            if outlier(each_target_share_weight[0]):
-                counters[-1].Ncorrect += 1.0
-
-    acc_tests = [x.reportAccuracy() for x in counters if not np.isnan(x.reportAccuracy())]
-    acc_test = torch.ones(1, 1) * np.mean(acc_tests)
-    print(f'test accuracy is {acc_test.item()}')
-    exit(0)
 
 # ===================optimizer
 scheduler = lambda step, initial_lr: inverseDecaySheduler(step, initial_lr, gamma=10, power=0.75, max_iter=10000)
@@ -223,69 +169,12 @@ while global_step < args.train.min_step:
             logger.add_scalar('adv_loss_separate', adv_loss_separate, global_step)
             logger.add_scalar('acc_train', acc_train, global_step)
 
-        if global_step % args.test.test_interval == 0:
-
-            counters = [AccuracyCounter() for x in range(len(source_classes) + 1)]
-            with TrainingModeManager([feature_extractor, classifier, discriminator_separate], train=False) as mgr, \
-                    Accumulator(['feature', 'predict_prob', 'label', 'domain_prob', 'before_softmax',
-                                 'target_share_weight']) as target_accumulator, \
-                    torch.no_grad():
-
-                for i, (im, label) in enumerate(tqdm(target_test_dl, desc='testing ')):
-                    im = im.to(output_device)
-                    label = label.to(output_device)
-
-                    feature = feature_extractor.forward(im)
-                    feature, __, before_softmax, predict_prob = classifier.forward(feature)
-                    domain_prob = discriminator_separate.forward(__)
-
-                    target_share_weight = get_target_share_weight(domain_prob, before_softmax, domain_temperature=1.0,
-                                                                  class_temperature=1.0)
-
-                    for name in target_accumulator.names:
-                        globals()[name] = variable_to_numpy(globals()[name])
-
-                    target_accumulator.updateData(globals())
-
-            for x in target_accumulator:
-                globals()[x] = target_accumulator[x]
-
-
-            def outlier(each_target_share_weight):
-                return each_target_share_weight < args.test.w_0
-
-
-            counters = [AccuracyCounter() for x in range(len(source_classes) + 1)]
-
-            for (each_predict_prob, each_label, each_target_share_weight) in zip(predict_prob, label,
-                                                                                 target_share_weight):
-                if each_label in source_classes:
-                    counters[each_label].Ntotal += 1.0
-                    each_pred_id = np.argmax(each_predict_prob)
-                    if not outlier(each_target_share_weight[0]) and each_pred_id == each_label:
-                        counters[each_label].Ncorrect += 1.0
-                else:
-                    counters[-1].Ntotal += 1.0
-                    if outlier(each_target_share_weight[0]):
-                        counters[-1].Ncorrect += 1.0
-
-            acc_tests = [x.reportAccuracy() for x in counters if not np.isnan(x.reportAccuracy())]
-            acc_test = torch.ones(1, 1) * np.mean(acc_tests)
-
-            logger.add_scalar('acc_test', acc_test, global_step)
-            clear_output()
-
             data = {
                 "feature_extractor": feature_extractor.state_dict(),
                 'classifier': classifier.state_dict(),
                 'discriminator': discriminator.state_dict() if not isinstance(discriminator, Nonsense) else 1.0,
                 'discriminator_separate': discriminator_separate.state_dict(),
             }
-
-            if acc_test > best_acc:
-                best_acc = acc_test
-                with open(join(log_dir, 'best.pkl'), 'wb') as f:
-                    torch.save(data, f)
 
             with open(join(log_dir, 'current.pkl'), 'wb') as f:
                 torch.save(data, f)
