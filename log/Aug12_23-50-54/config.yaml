@@ -1,0 +1,31 @@
+data:
+  dataloader:
+    batch_size: 36
+    class_balance: true
+    data_workers: 4
+  dataset:
+    n_share: 4
+    n_source_private: 4
+    n_total: 5
+    name: BRCA
+    root_path: /scratch/wang_lab/BRCA_project/data
+    source: 0
+    target: 1
+log:
+  log_interval: 10
+  root_dir: log
+misc:
+  gpus: 4
+model:
+  base_model: resnet50
+  pretrained_model: pre-trained/resnet50.pth
+test:
+  resume_file: ''
+  test_interval: 500
+  test_only: false
+  w_0: -0.5
+train:
+  lr: 0.001
+  min_step: 20000
+  momentum: 0.9
+  weight_decay: 0.0005
