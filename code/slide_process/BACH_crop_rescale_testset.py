@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Created on Thu Dec 26 22:34:06 2024
+Created on Fri Dec 27 12:46:58 2024
 
 @author: lillianli
 """
@@ -16,7 +16,7 @@ from PIL import Image
 
 # Lillian 12/26
 # This code is used to rescale and crop BACH histology images 
-# Use this code on the BACH histology images Training set
+# Use this code on the BACH histology images Testing set
 
 # Notes:
 # Original BACH histology images 2048 x 1536 pixel
@@ -46,20 +46,18 @@ def crop_image(image, height, width, strideH, strideW):
     return tiles
 
 def save_numpy_tiles(input_folder, output_folder, height, width, strideH, strideW):
-    for class_folder in os.listdir(input_folder):
-        class_path = os.path.join(input_folder, class_folder)
-        if os.path.isdir(class_path):
-            output_class_path = os.path.join(output_folder, class_folder)
-            os.makedirs(output_class_path, exist_ok = True)
-            for img_file in glob.glob(os.path.join(class_path, "*.tif")):
-                img_name = os.path.basename(img_file).replace('.tif', '')
-                img = np.array(Image.open(img_file))
-                img_rescaled = rescale_image(img) 
-                tiles = crop_image(img_rescaled, height, width, strideH, strideW)
-                for idx, tile in enumerate(tiles, start=1):
-                    tile_filename = f"{img_name}_{idx:03d}.npy"
-                    tile_path = os.path.join(output_class_path, tile_filename)
-                    np.save(tile_path, tile)
+    os.makedirs(output_folder, exist_ok = True)
+    
+    for img_file in glob.glob(os.path.join(input_folder, "*.tif")):
+        img_name = os.path.basename(img_file).replace('.tif', '')  
+        img = np.array(Image.open(img_file))  
+        img_rescaled = rescale_image(img)  
+        tiles = crop_image(img_rescaled, height, width, strideH, strideW)  
+
+        for idx, tile in enumerate(tiles, start=1):
+            tile_filename = f"{img_name}_{idx:03d}.npy"
+            tile_path = os.path.join(output_folder, tile_filename)
+            np.save(tile_path, tile)
 
 # Run
 if __name__ == "__main__":
