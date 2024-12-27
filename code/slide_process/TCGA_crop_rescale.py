@@ -2,7 +2,6 @@ import os
 import numpy as np
 import openslide
 import argparse
-import pickle
 import cv2
 import openslide.deepzoom
 import pandas as pd
@@ -19,6 +18,8 @@ from PIL import Image
 # scale_factor = 0.42 / data['Scale.X'] e.g.,
 # each one divided by it's own scale, not just one fixed number!
 
+# Crop part:
+# From left to right top and bottom
 
 # Define functions part:
     
@@ -86,7 +87,7 @@ def save_numpy_tiles(path2slides, folder, slidename, output_path, scale_factor, 
         np.save(tile_path, tile)
         print(f"Saved rescaled tile {tile_filename}")
         
-
+# Process
 def process_all_slides(path2slides, output_path, scale_factor, height, width, strideH, strideW):
     slide_dirs = [d for d in os.listdir(path2slides) if os.path.isdir(os.path.join(path2slides, d))]
 
