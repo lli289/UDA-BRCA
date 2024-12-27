@@ -6,56 +6,18 @@ import cv2
 import openslide.deepzoom
 import pandas as pd
 
-from PIL import Image
-
 # Lillian 12/26
 # This code is used to rescale and crop TCGA histology images
 
-# Rescale part:
-# TCGA Histology images 2048 x 1536 pixel
-# BACH Histology images 2048 x 1536 pixel
-# BACH Pixel scale 0.42 µm x 0.42 µm
-# scale_factor = 0.42 / data['Scale.X'] e.g.,
-# each one divided by it's own scale, not just one fixed number!
+# Notes:
+# Original BACH histology images 2048 x 1536 pixel
+# Origianl BACH pixel scale 0.42um x 0.42um
 
-# Crop part:
-# From left to right top and bottom
-
-# Define functions part:
-    
-def stretch_pre(nimg):
-    nimg = nimg.transpose(2, 0, 1)
-    nimg[0] = np.maximum(nimg[0] - nimg[0].min(), 0)
-    nimg[1] = np.maximum(nimg[1] - nimg[1].min(), 0)
-    nimg[2] = np.maximum(nimg[2] - nimg[2].min(), 0)
-    return nimg.transpose(1, 2, 0)
-
-def max_white(nimg):
-    if nimg.dtype == np.uint8:
-        brightest = float(2 ** 8)
-    elif nimg.dtype == np.uint16:
-        brightest = float(2 ** 16)
-    elif nimg.dtype == np.uint32:
-        brightest = float(2 ** 32)
-    else:
-        brightest = float(2 ** 8)
-    nimg = nimg.transpose(2, 0, 1)
-    nimg = nimg.astype(np.int32)
-    nimg[0] = np.minimum(nimg[0] * (brightest / float(nimg[0].max())), 255)
-    nimg[1] = np.minimum(nimg[1] * (brightest / float(nimg[1].max())), 255)
-    nimg[2] = np.minimum(nimg[2] * (brightest / float(nimg[2].max())), 255)
-    return nimg.transpose(1, 2, 0).astype(np.uint8)
-
-def stretch(nimg):
-    return max_white(stretch_pre(nimg))
-
-def from_pil(pimg):
-    pimg = pimg.convert(mode='RGB')
-    nimg = np.array(pimg)
-    return nimg
-
-def to_pil(nimg):
-    return Image.fromarray(np.uint8(nimg))
+# Goal: 
+# 1. BACH: Resize original histology images to 512 x 384 resolution 
+#       new pixel scale after resizing: 1.68um x 1.68um
+# 2. TCGA: Resize original histology images to pixel scale 1.68um x 1.68um
+# 3. Crop resized BACH and TCGA to 224 x 224 patches with 50% overlap
     
 def rescale_image(image, scale_factor):
     height, width = image.shape[:2]
@@ -111,15 +73,16 @@ def process_all_slides(path2slides, output_path, height, width, strideH, strideW
         # Remember to match!
         scale_factor = 0.42 / scale_data['Scale.X'][scale_data['Slide.ID'] == slidename]
         save_numpy_tiles(path2slides, folder, slidename, output_folder, scale_factor, height, width, strideH, strideW)
-      
+
+# Run
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Process TCGA WSI slides")
     parser.add_argument('--input_dir', type = str, required = True, help = "Path to the input directory containing WSI files")
     parser.add_argument('--output_dir', type = str, required = True, help = "Path to the output directory to save tiles")
     args = parser.parse_args()
-    data = pd.read_csv('TCGA_scale.csv') # !!!!!!!change this working directory to the actual file location!
-    height = 1536
-    width = 2048
-    strideH = 384
-    strideW = 512
+    data = pd.read_csv('TCGA_scale.csv') # !!!!!!!CHANGE this working directory to the actual file location!
+    height = 384
+    width = 512
+    strideH = 192
+    strideW = 256
     process_all_slides(args.input_dir, args.output_dir, height, width, strideH, strideW, data)
