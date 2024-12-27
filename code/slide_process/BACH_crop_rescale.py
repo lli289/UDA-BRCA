@@ -8,10 +8,9 @@ Created on Thu Dec 26 22:34:06 2024
 
 import os
 import numpy as np
-import openslide
 import argparse
 import cv2
-# import openslide.deepzoom
+import glob
 
 from PIL import Image
 
@@ -45,55 +44,22 @@ def crop_image(image, height, width, strideH, strideW):
             tiles.append(image[y:y + height, x:x + width])
     return tiles
 
-#def save_numpy_tiles(path2slides, folder, slidename, output_path, height, width, strideH, strideW):
-#    slide_path = os.path.join(path2slides, folder, slidename)
-#    slide_name, _ = os.path.splitext(os.path.basename(slidename))
-#    slide = openslide.OpenSlide(slide_path)
-#    slide_rescaled = rescale_image(slide)  
-#    slide_crop = crop_image(slide_rescaled, height, width, strideH, strideW)
-#    for idx, tile in enumerate(slide_crop):
-#        tile_filename = f"{slide_name}_{idx + 1:04d}.npy"
-#        tile_path = os.path.join(output_path, tile_filename)
-#        np.save(tile_path, tile)
-#        print(f"Saved rescaled tile: {tile_filename}")  
-
-
-def save_numpy_tiles(path2slides, folder, slidename, output_path, height, width, strideH, strideW):
-    slide_path = os.path.join(path2slides, folder, slidename)
-    slide_name, _ = os.path.splitext(os.path.basename(slidename))
-    # open
-    img = Image.open(slide_path) 
-    img_rescaled = rescale_image(img)
-    # np.array becasue cropping
-    img_rescaled_np = np.array(img_rescaled) 
-    tiles = crop_image(img_rescaled_np, height, width, strideH, strideW)
-    for idx, tile in enumerate(tiles, start=1):
-        tile_filename = f"{slide_name}_{idx:04d}.npy"
-        tile_path = os.path.join(output_path, tile_filename)
-        np.save(tile_path, tile)
-        print(f"Saved tile: {tile_filename}")
-
-# Process
-def process_all_slides(path2slides, output_path, height, width, strideH, strideW):
-    slide_dirs = [d for d in os.listdir(path2slides) if os.path.isdir(os.path.join(path2slides, d))]
-
-    slidenames = []
-    subfolders = []
-
-    for d in slide_dirs:
-        for f in os.listdir(os.path.join(path2slides, d)):
-            if (f.endswith('.svs') or f.endswith('.tif')) and 'mask' not in f:
-                slidenames.append(f)
-                subfolders.append(d)
-
-    if not os.path.exists(output_path):
-        os.mkdir(output_path)
-
-    for folder, slidename in zip(subfolders, slidenames):
-        output_folder = os.path.join(output_path, folder)
-        if not os.path.exists(output_folder):
-            os.mkdir(output_folder)
-        save_numpy_tiles(path2slides, folder, slidename, output_folder, height, width, strideH, strideW)
+def save_numpy_tiles(input_folder, output_folder, height, width, strideH, strideW):
+    for class_folder in os.listdir(input_folder):
+        class_path = os.path.join(input_folder, class_folder)
+        if os.path.isdir(class_path):
+            output_class_path = os.path.join(output_folder, class_folder)
+            os.makedirs(output_class_path, exist_ok = True)
+            for img_file in glob.glob(os.path.join(class_path, "*.tif")):
+                img_name = os.path.basename(img_file).replace('.tif', '')
+                img = Image.open(img_file) 
+                img_rescaled = rescale_image(img)
+                img_rescaled_np = np.array(img_rescaled) 
+                tiles = crop_image(img_rescaled_np, height, width, strideH, strideW)
+                for idx, tile in enumerate(tiles, start=1):
+                    tile_filename = f"{img_name}_{idx:03d}.npy"
+                    tile_path = os.path.join(output_class_path, tile_filename)
+                    np.save(tile_path, tile)
 
 # Run
 if __name__ == "__main__":
@@ -105,4 +71,4 @@ if __name__ == "__main__":
     width = 512
     strideH = 192
     strideW = 256
-    process_all_slides(args.input_dir, args.output_dir, height, width, strideH, strideW)
+    save_numpy_tiles(args.input_dir, args.output_dir, height, width, strideH, strideW)
