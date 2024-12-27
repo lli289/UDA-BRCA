@@ -95,16 +95,19 @@ def save_numpy_tiles(path2slides, folder, slidename, coords, output_path):
     slide_path = os.path.join(path2slides, folder, slidename)
     slide_name = os.path.splitext(os.path.basename(slidename))[0]
     slide = openslide.OpenSlide(slide_path)
-    zoom = openslide.deepzoom.DeepZoomGenerator(slide, tile_size = 224, overlap = 0)
+    zoom = openslide.deepzoom.DeepZoomGenerator(slide, tile_size=224, overlap=0)
     new_coords = transform_coords_for_level18(coords)
+    level = 18
+    max_tiles_x, max_tiles_y = zoom.level_tiles[level]  # e.g. (num_tiles_x, num_tiles_y)
     for idx, new_coord in enumerate(new_coords):
-        try:
+        _, tile_x, tile_y = new_coord
+        if 0 <= tile_x < max_tiles_x and 0 <= tile_y < max_tiles_y:
             tile = extract_tile_features(new_coord, zoom)
             tile_filename = f"{slide_name}_{idx+1:04d}.npy"
             tile_path = os.path.join(output_path, tile_filename)
             np.save(tile_path, tile)
             print(f"Saved tile {tile_filename} at level=18 (≈1.68 mpp)")
-        except openslide.deepzoom.DeepZoomError:
+        else:
             print(f"Warning: tile index out of range at {new_coord}, skipping...")
 
 def process_all_slides(path2slides, tile_coords, output_path):
