@@ -16,7 +16,7 @@ import pandas as pd
 # Goal: 
 # 1. BACH: Resize original histology images to 512 x 384 resolution 
 #       new pixel scale after resizing: 1.68um x 1.68um
-# 2. TCGA: Resize original histology images to pixel scale 1.68um x 1.68um
+# 2. TCGA: Resize original histology images to match pixel scale 1.68um x 1.68um
 # 3. Crop resized BACH and TCGA to 224 x 224 patches with 50% overlap
     
 def rescale_image(image, scale_factor):
@@ -50,7 +50,7 @@ def save_numpy_tiles(path2slides, folder, slidename, output_path, scale_factor, 
         print(f"Saved rescaled tile {tile_filename}")
         
 # Process
-def process_all_slides(path2slides, output_path, height, width, strideH, strideW, scale_data):
+def process_all_slides(path2slides, output_path, strideH, strideW, scale_data):
     slide_dirs = [d for d in os.listdir(path2slides) if os.path.isdir(os.path.join(path2slides, d))]
 
     slidenames = []
@@ -71,8 +71,8 @@ def process_all_slides(path2slides, output_path, height, width, strideH, strideW
             os.mkdir(output_folder)
         # Each one divided by it's on scale; not a fixed number!
         # Remember to match!
-        scale_factor = 0.42 / scale_data['Scale.X'][scale_data['Slide.ID'] == slidename]
-        save_numpy_tiles(path2slides, folder, slidename, output_folder, scale_factor, height, width, strideH, strideW)
+        scale_factor = 1.68 / scale_data['Scale.X'][scale_data['Slide.ID'] == slidename]
+        save_numpy_tiles(path2slides, folder, slidename, output_folder, scale_factor, strideH, strideW)
 
 # Run
 if __name__ == "__main__":
@@ -81,8 +81,7 @@ if __name__ == "__main__":
     parser.add_argument('--output_dir', type = str, required = True, help = "Path to the output directory to save tiles")
     args = parser.parse_args()
     data = pd.read_csv('TCGA_scale.csv') # !!!!!!!CHANGE this working directory to the actual file location!
-    height = 384
-    width = 512
-    strideH = 192
-    strideW = 256
-    process_all_slides(args.input_dir, args.output_dir, height, width, strideH, strideW, data)
+    scale_factor = 1.68 / data['Scale.X']
+    strideH = 112 
+    strideW = 112
+    process_all_slides(args.input_dir, args.output_dir, strideH, strideW, data)

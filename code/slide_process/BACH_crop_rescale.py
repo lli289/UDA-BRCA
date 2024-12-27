@@ -11,7 +11,9 @@ import numpy as np
 import openslide
 import argparse
 import cv2
-import openslide.deepzoom
+# import openslide.deepzoom
+
+from PIL import Image
 
 # Lillian 12/26
 # This code is used to rescale and crop BACH histology images
@@ -43,17 +45,33 @@ def crop_image(image, height, width, strideH, strideW):
             tiles.append(image[y:y + height, x:x + width])
     return tiles
 
+#def save_numpy_tiles(path2slides, folder, slidename, output_path, height, width, strideH, strideW):
+#    slide_path = os.path.join(path2slides, folder, slidename)
+#    slide_name, _ = os.path.splitext(os.path.basename(slidename))
+#    slide = openslide.OpenSlide(slide_path)
+#    slide_rescaled = rescale_image(slide)  
+#    slide_crop = crop_image(slide_rescaled, height, width, strideH, strideW)
+#    for idx, tile in enumerate(slide_crop):
+#        tile_filename = f"{slide_name}_{idx + 1:04d}.npy"
+#        tile_path = os.path.join(output_path, tile_filename)
+#        np.save(tile_path, tile)
+#        print(f"Saved rescaled tile: {tile_filename}")  
+
+
 def save_numpy_tiles(path2slides, folder, slidename, output_path, height, width, strideH, strideW):
     slide_path = os.path.join(path2slides, folder, slidename)
     slide_name, _ = os.path.splitext(os.path.basename(slidename))
-    slide = openslide.OpenSlide(slide_path)
-    slide_rescaled = rescale_image(slide)  
-    slide_crop = crop_image(slide_rescaled, height, width, strideH, strideW)
-    for idx, tile in enumerate(slide_crop):
-        tile_filename = f"{slide_name}_{idx + 1:04d}.npy"
+    # open
+    img = Image.open(slide_path) 
+    img_rescaled = rescale_image(img)
+    # np.array becasue cropping
+    img_rescaled_np = np.array(img_rescaled) 
+    tiles = crop_image(img_rescaled_np, height, width, strideH, strideW)
+    for idx, tile in enumerate(tiles, start=1):
+        tile_filename = f"{slide_name}_{idx:04d}.npy"
         tile_path = os.path.join(output_path, tile_filename)
         np.save(tile_path, tile)
-        print(f"Saved rescaled tile: {tile_filename}")  
+        print(f"Saved tile: {tile_filename}")
 
 # Process
 def process_all_slides(path2slides, output_path, height, width, strideH, strideW):
