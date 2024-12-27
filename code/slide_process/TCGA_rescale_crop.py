@@ -181,7 +181,7 @@ def process_all_slides(path2slides, tile_coords, output_path):
                 os.mkdir(output_folder)
             save_numpy_tiles(path2slides, folder, slidename, tile_coords[slidename], output_folder)
         else:
-            print(f'Warning: tile coordinates not found for file {slidename}, skipping...")
+            print(f'Warning: tile coordinates not found for file {slidename}, skipping...')
 
 ##############################################################################
 # Main
