@@ -15,8 +15,7 @@ import glob
 from PIL import Image
 
 # Lillian 12/26
-# This code is used to rescale and crop BACH histology images 
-# Use this code on the BACH histology images Training set
+# This code is used to rescale and crop BACH histology images
 
 # Notes:
 # Original BACH histology images 2048 x 1536 pixel
@@ -53,8 +52,8 @@ def save_numpy_tiles(input_folder, output_folder, height, width, strideH, stride
             os.makedirs(output_class_path, exist_ok = True)
             for img_file in glob.glob(os.path.join(class_path, "*.tif")):
                 img_name = os.path.basename(img_file).replace('.tif', '')
-                img = np.array(Image.open(img_file))
-                img_rescaled = rescale_image(img) 
+                img = np.array(Image.open(img_file)) 
+                img_rescaled = rescale_image(img)
                 tiles = crop_image(img_rescaled, height, width, strideH, strideW)
                 for idx, tile in enumerate(tiles, start=1):
                     tile_filename = f"{img_name}_{idx:03d}.npy"
