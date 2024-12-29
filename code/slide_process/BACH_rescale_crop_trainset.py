@@ -11,25 +11,24 @@ import numpy as np
 import argparse
 import cv2
 import glob
-
 from PIL import Image
 
 # Lillian 12/26
-# This code is used to rescale and crop BACH histology images
+# This code is used to rescale and crop BACH histology images training set
 
 # Notes:
 # Original BACH histology images 2048 x 1536 pixel
-# Origianl BACH pixel scale 0.42um x 0.42um
+# Original BACH pixel scale 0.42um x 0.42um
 
 # Goal: 
 # 1. BACH: Resize original histology images to 512 x 384 resolution 
 #       new pixel scale after resizing: 1.68um x 1.68um
-# 2. TCGA: Resize original histology images to pixel scale 1.68um x 1.68um
-# 3. Crop resized BACH and TCGA to 224 x 224 patches with 50% overlap
+# 3. Crop resized BACH 224 x 224 patches with 50% overlap
     
-def rescale_image(image):
-    height, width = image.shape[:2]
-    new_height, new_width = int(height), int(width) 
+def rescale_image(image, target_scale=1.68, original_scale=0.42):
+    scale_factor = original_scale / target_scale
+    new_height = int(image.shape[0] * scale_factor)
+    new_width = int(image.shape[1] * scale_factor)
     return cv2.resize(image, (new_width, new_height), interpolation=cv2.INTER_LINEAR)
 
 def crop_image(image, height, width, strideH, strideW):
@@ -66,8 +65,8 @@ if __name__ == "__main__":
     parser.add_argument('--input_dir', type = str, required = True, help = "Path to the input directory containing BACH files")
     parser.add_argument('--output_dir', type = str, required = True, help = "Path to the output directory to save tiles")
     args = parser.parse_args()
-    height = 384
-    width = 512
-    strideH = 192
-    strideW = 256
+    height = 224
+    width = 224
+    strideH = 112  # 50% overlap
+    strideW = 112  # 50% overlap
     save_numpy_tiles(args.input_dir, args.output_dir, height, width, strideH, strideW)
